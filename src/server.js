@@ -1,6 +1,7 @@
 import mc from "minecraft-protocol";
 import net from "net";
 import stream from "stream";
+import { EventEmitter } from "events";
 
 function createNoopStream() {
     return new stream.Duplex({
@@ -11,12 +12,13 @@ function createNoopStream() {
     });
 }
 
-export default class ProxyServer {
+export default class ProxyServer extends EventEmitter {
     constructor(
         /**@type {number}*/ listenPort,
         /**@type {string}*/ targetHost,
         /**@type {number}*/ targetPort
     ) {
+        super();
         this.alive = false;
         this.startTime = 0;
         this.lastTargetData = {};
@@ -74,22 +76,12 @@ export default class ProxyServer {
             writable: false,
         });
 
-        let clientAlive = true;
-        let targetClientAlive = false;
-
-        // make sure the two clients close when the other closes
+        // listen to stuff we want to know from client
         client.on("error", err => {
             console.log(`[error] Error from ${addr}`, err);
-            if (targetClientAlive) {
-                targetClient.end("Error");
-            }
         });
         client.on("end", () => {
             console.log(`[info] Client connection closed (${addr})`);
-            clientAlive = false;
-            if (targetClientAlive) {
-                targetClient.end("End");
-            }
         });
     }
 
@@ -97,6 +89,7 @@ export default class ProxyServer {
         if (!this.alive) {
             if (!this.startTime) {
                 this.startTime = Date.now();
+                this.emit("start");
             }
             const secondsSinceStart = Math.round(
                 (Date.now() - this.startTime) / 1000
