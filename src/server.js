@@ -59,7 +59,7 @@ export default class ProxyServer extends EventEmitter {
         if (this.alive) {
             const targetConnection = net.connect(
                 this.target.port,
-                this.target.name
+                this.target.host
             );
             const socket = client.socket;
             client.socket = createNoopStream();
