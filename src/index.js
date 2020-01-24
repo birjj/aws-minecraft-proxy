@@ -54,7 +54,7 @@ function executeCommand(name) {
     );
 }
 
-const server = new Server(25545, "localhost", 25565);
+const server = new Server(25545, config.target.host, config.target.port);
 server.on("start", () => {
     executeCommand("start");
 });
