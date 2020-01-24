@@ -1,0 +1,13 @@
+{
+    "name": "minecraft-aws-proxy",
+    "type": "module",
+    "version": "1.0.1",
+    "description": "Run scripts when connections are opened to a Minecraft server. Useful for starting an EC2 instance on demand.",
+    "main": "src/index.js",
+    "author": "birjolaxew",
+    "license": "MIT",
+    "private": true,
+    "dependencies": {
+        "minecraft-protocol": "^1.10.0"
+    }
+}
