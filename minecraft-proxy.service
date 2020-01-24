@@ -1,0 +1,10 @@
+[Unit]
+Description=Minecraft proxy that automatically starts an EC2 server when a connection is made
+
+[Service]
+ExecStart=<path-goes-here>/src/index.js
+Restart=always
+WorkingDirectory=<path-goes-here>
+
+[Install]
+WantedBy=multi-user.target

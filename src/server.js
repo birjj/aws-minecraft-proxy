@@ -140,6 +140,7 @@ export default class ProxyServer extends EventEmitter {
 
                 if (!this.isShuttingDown && secondsSinceActive >= 5 * 60) {
                     this.isShuttingDown = true;
+                    this.lastActiveTime = 0;
                     this.emit("shutdown");
                 }
             } else if (data.players && data.players.online > 0) {
