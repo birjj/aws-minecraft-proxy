@@ -17,7 +17,10 @@ Add the following (and customize it):
 "minecraft-aws": ${JSON.stringify(
         {
             target: { host: "localhost", port: 25565 },
-            commands: { start: "echo 'Starting server'" },
+            commands: {
+                start: "echo 'Starting server'",
+                shutdown: "echo 'Shutting down server'",
+            },
         },
         null,
         2
@@ -54,4 +57,7 @@ function executeCommand(name) {
 const server = new Server(25545, "localhost", 25565);
 server.on("start", () => {
     executeCommand("start");
+});
+server.on("shutdown", () => {
+    executeCommand("shutdown");
 });

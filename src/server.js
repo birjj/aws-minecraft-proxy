@@ -26,7 +26,9 @@ export default class ProxyServer extends EventEmitter {
             host: targetHost,
             port: targetPort,
         };
-        this.aliveCheck = this.aliveCheck.bind(this);
+        this.lastActiveTime = 0;
+        this.isShuttingDown = false;
+        this.checkTarget = this.checkTarget.bind(this);
 
         // create the server we use to intercept the pings
         this.server = mc.createServer({
@@ -46,12 +48,12 @@ export default class ProxyServer extends EventEmitter {
         });
 
         // start checking if the remote is up
-        this.aliveCheck();
+        this.checkTarget();
     }
 
     handleClient(client) {
         const addr = client.socket.remoteAddress;
-        console.log(`Connection from ${addr}`);
+        console.log(`[info] Connection from ${addr}`);
 
         // hijack the socket for proxying and exit early if we have an alive target
         if (this.alive) {
@@ -64,6 +66,14 @@ export default class ProxyServer extends EventEmitter {
             socket.unpipe(); // stop everyone else from listening to it
             socket.pipe(targetConnection);
             targetConnection.pipe(socket);
+
+            // make sure the connections close when one or the other dies
+            socket.on("close", () => {
+                targetConnection.end();
+            });
+            targetConnection.on("close", () => {
+                socket.end();
+            });
             return;
         }
 
@@ -109,18 +119,41 @@ export default class ProxyServer extends EventEmitter {
         return data;
     }
 
-    async aliveCheck() {
+    async checkTarget() {
         try {
             const data = await this.getTargetData();
             console.log("[silly] Target is alive", data);
             this.alive = true;
             this.lastTargetData = data;
+
+            // if there are no players, shutdown after 5 minutes
+            if (data.players && data.players.online === 0) {
+                if (!this.lastActiveTime) {
+                    this.lastActiveTime = Date.now();
+                }
+                const secondsSinceActive = Math.round(
+                    (Date.now() - this.lastActiveTime) / 1000
+                );
+                console.log(
+                    `[silly] Server has been inactive for ${secondsSinceActive}s`
+                );
+
+                if (!this.isShuttingDown && secondsSinceActive >= 5 * 60) {
+                    this.isShuttingDown = true;
+                    this.emit("shutdown");
+                }
+            } else if (data.players && data.players.online > 0) {
+                this.isShuttingDown = false;
+                this.lastActiveTime = 0;
+            }
         } catch (e) {
-            console.log("[silly] Target is not alive");
+            console.log("[silly] Target is not alive", e);
             this.alive = false;
+            this.lastActiveTime = 0;
+            this.isShuttingDown = false;
         }
 
-        setTimeout(this.aliveCheck, 5000);
+        setTimeout(this.checkTarget, 5000);
     }
 
     async getTargetData() {
