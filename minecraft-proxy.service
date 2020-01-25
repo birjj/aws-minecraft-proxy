@@ -4,8 +4,8 @@ After=network.target
 
 [Service]
 ExecStart=<path-to-node> <path-goes-here>/src/index.js
-User=ec2-user
-Group=ec2-user
+User=<user-goes-here>
+Group=<group-goes-here>
 Restart=always
 WorkingDirectory=<path-goes-here>
 Environment=DBGLEVEL=log
