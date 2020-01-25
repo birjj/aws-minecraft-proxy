@@ -2,6 +2,7 @@ import mc from "minecraft-protocol";
 import net from "net";
 import stream from "stream";
 import { EventEmitter } from "events";
+import { silly, log, error } from "./debug.js";
 
 function createNoopStream() {
     return new stream.Duplex({
@@ -39,7 +40,7 @@ export default class ProxyServer extends EventEmitter {
         });
         this.server.on("connection", this.handleClient.bind(this));
         this.server.on("listening", () => {
-            console.log(`[info] Listening on :${listenPort}`);
+            log(`Listening on :${listenPort}`);
         });
 
         // stop players from connecting to the server
@@ -53,7 +54,7 @@ export default class ProxyServer extends EventEmitter {
 
     handleClient(client) {
         const addr = client.socket.remoteAddress;
-        console.log(`[info] Connection from ${addr}`);
+        log(`Connection from ${addr}`);
 
         // hijack the socket for proxying and exit early if we have an alive target
         if (this.alive) {
@@ -88,10 +89,10 @@ export default class ProxyServer extends EventEmitter {
 
         // listen to stuff we want to know from client
         client.on("error", err => {
-            console.log(`[error] Error from ${addr}`, err);
+            error(`Error from ${addr}`, err);
         });
         client.on("end", () => {
-            console.log(`[info] Client connection closed (${addr})`);
+            log(`Client connection closed (${addr})`);
         });
     }
 
@@ -114,7 +115,7 @@ export default class ProxyServer extends EventEmitter {
             data.players.max = 0;
         }
 
-        console.log("[info] Sending out ping", data);
+        log("Sending out ping", data);
 
         return data;
     }
@@ -122,7 +123,7 @@ export default class ProxyServer extends EventEmitter {
     async checkTarget() {
         try {
             const data = await this.getTargetData();
-            console.log("[silly] Target is alive", data);
+            silly("Target is alive", data);
             this.alive = true;
             this.lastTargetData = data;
 
@@ -134,9 +135,7 @@ export default class ProxyServer extends EventEmitter {
                 const secondsSinceActive = Math.round(
                     (Date.now() - this.lastActiveTime) / 1000
                 );
-                console.log(
-                    `[silly] Server has been inactive for ${secondsSinceActive}s`
-                );
+                silly(`Server has been inactive for ${secondsSinceActive}s`);
 
                 if (!this.isShuttingDown && secondsSinceActive >= 5 * 60) {
                     this.isShuttingDown = true;
@@ -148,7 +147,7 @@ export default class ProxyServer extends EventEmitter {
                 this.lastActiveTime = 0;
             }
         } catch (e) {
-            console.log("[silly] Target is not alive", e);
+            silly("Target is not alive", e);
             this.alive = false;
             this.lastActiveTime = 0;
             this.isShuttingDown = false;

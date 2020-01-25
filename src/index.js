@@ -2,7 +2,7 @@
 import fs from "fs";
 import path from "path";
 import childProcess from "child_process";
-import "./debug.js";
+import { silly, log, error } from "./debug.js";
 import Server from "./server.js";
 import dirname from "./dirname.cjs";
 const { __dirname } = dirname;
@@ -32,25 +32,23 @@ Add the following (and customize it):
 function executeCommand(name) {
     const command = config.commands[name];
     if (!command) {
-        console.log(`[silly] Unknown command ${name}`);
+        silly(`Unknown command ${name}`);
         return;
     }
-    console.log(`[info] Executing command ${name}: ${command}`);
+    log(`Executing command ${name}: ${command}`);
     childProcess.exec(
         command,
         { cwd: path.join(__dirname, "..") },
         (err, stdout, stderr) => {
             if (err) {
-                console.log(
-                    `[error] Command ${name} failed (${err.name} ${
+                error(
+                    `Command ${name} failed (${err.name} ${
                         err.message
                     }):\n${stderr.toString()}`
                 );
                 return;
             }
-            console.log(
-                `[info] Command ${name} finished:\n${stdout.toString()}`
-            );
+            log(`Command ${name} finished:\n${stdout.toString()}`);
         }
     );
 }
