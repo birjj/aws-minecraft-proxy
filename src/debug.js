@@ -7,7 +7,7 @@ const LEVELS = {
     silly: 3,
 };
 const debugLevel =
-    process.env.DBGLEVEL === undefined ? 2 : process.env.DBGLEVEL;
+    process.env.DBGLEVEL === undefined ? 2 : LEVELS[process.env.DBGLEVEL];
 if (debugLevel >= LEVELS.silly) {
     mc.Client.prototype._write = mc.Client.prototype.write;
     mc.Client.prototype.write = function(...args) {
