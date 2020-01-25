@@ -8,6 +8,7 @@ User=ec2-user
 Group=ec2-user
 Restart=always
 WorkingDirectory=<path-goes-here>
+Environment=DBGLEVEL=log
 
 [Install]
 WantedBy=multi-user.target
