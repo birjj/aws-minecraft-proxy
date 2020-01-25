@@ -126,6 +126,7 @@ export default class ProxyServer extends EventEmitter {
             silly("Target is alive", data);
             this.alive = true;
             this.lastTargetData = data;
+            this.startTime = 0;
 
             // if there are no players, shutdown after 5 minutes
             if (data.players && data.players.online === 0) {
