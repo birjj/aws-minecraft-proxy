@@ -63,6 +63,7 @@ export default class ServerChecker {
             })
             .then(() => {
                 state.time = Date.now();
+                this.currentState = state;
                 this._checkTimeout = setTimeout(this.checkTarget, 5000);
             });
     }
