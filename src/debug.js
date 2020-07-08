@@ -10,19 +10,20 @@ const LEVELS = {
     warn: 1,
     log: 2,
     silly: 3,
+    absurd: 4,
 };
 const debugLevel =
     process.env.DBGLEVEL === undefined ? 2 : LEVELS[process.env.DBGLEVEL];
-if (debugLevel >= LEVELS.silly) {
+if (debugLevel >= LEVELS.absurd) {
     mc.Client.prototype._write = mc.Client.prototype.write;
     mc.Client.prototype.write = function (...args) {
-        console.log("[silly] Client write:", ...args);
+        console.log("[absurd] Client write:", ...args);
         this._write(...args);
     };
 
     mc.Client.prototype._emit = mc.Client.prototype.emit;
     mc.Client.prototype.emit = function (...args) {
-        console.log("[silly] Client emit:", ...args);
+        console.log("[absurd] Client emit:", ...args);
         this._emit(...args);
     };
 }

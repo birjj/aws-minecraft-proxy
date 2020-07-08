@@ -49,7 +49,7 @@ export default class ServerChecker {
             timeoutPromise(CHECK_TIMEOUT, TIMEOUT_ERR),
         ])
             .then((data) => {
-                silly("Target is alive");
+                silly("Target is alive", data);
                 state.active = true;
                 state.data = data;
             })

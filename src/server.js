@@ -204,7 +204,7 @@ export default class ProxyServer extends EventEmitter {
         if (this.currentState.state === STATES.active) {
             const players =
                 this.checker.currentState.data &&
-                this.checker.currentState.players
+                this.checker.currentState.data.players
                     ? this.checker.currentState.data.players.online || 0
                     : 0;
 
