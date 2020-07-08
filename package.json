@@ -8,7 +8,7 @@
     "license": "MIT",
     "private": true,
     "dependencies": {
-        "minecraft-protocol": "^1.10.0"
+        "minecraft-protocol": "^1.13.0"
     },
     "minecraft-aws": {
         "target": {
