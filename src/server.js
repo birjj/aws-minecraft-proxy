@@ -145,6 +145,10 @@ export default class ProxyServer extends EventEmitter {
             return this.checker.currentState.data;
         }
 
+        if (this.checker.currentState && this.checker.currentState.data) {
+            data.favicon = this.checker.currentState.data.favicon;
+        }
+
         // otherwise respond with explanatory text
         data.players.max = 0;
         data.version.protocol = 1; // set a known-bad protocol so the user gets an error showing the version name
