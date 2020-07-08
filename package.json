@@ -16,7 +16,8 @@
             "port": 25565
         },
         "commands": {
-            "start": "echo 'Starting server'"
+            "start": "echo 'Starting server'",
+            "shutdown": "echo 'Stopping server'"
         }
     }
 }
