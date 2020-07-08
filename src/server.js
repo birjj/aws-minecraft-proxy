@@ -108,15 +108,6 @@ export default class ProxyServer extends EventEmitter {
             return;
         }
 
-        // since we only use the connection, we don't really care about the protocol version
-        // we just monkeypatch it to use a known-supported version
-        Object.defineProperty(client, "protocolVersion", {
-            value: 575,
-            configurable: true,
-            enumerable: true,
-            writable: false,
-        });
-
         // listen to stuff we want to know from client
         client.on("error", (err) => {
             error(`Error from ${addr}`, err);
@@ -175,14 +166,14 @@ export default class ProxyServer extends EventEmitter {
         // make sure don't end up hanging on starting/stopping by introducing a timeout
         switch (this.currentState.state) {
             case STATES.stopping: // we keep trying to shut down if it fails
-                error("Stopping timed out. Retrying");
                 if (Date.now() - this.currentState.time > 5 * 60 * 1000) {
+                    error("Stopping timed out. Retrying");
                     this.setState(STATES.stopping, true);
                 }
                 break;
             case STATES.starting: // if starting fails, just abort
-                error("Starting timed out. Aborting");
                 if (Date.now() - this.currentState.time > 5 * 60 * 1000) {
+                    error("Starting timed out. Aborting");
                     this.setState(STATES.inactive);
                 }
                 break;
