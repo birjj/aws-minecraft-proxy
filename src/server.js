@@ -88,10 +88,17 @@ export default class ProxyServer extends EventEmitter {
 
         // hijack the socket for proxying and exit early if we have an alive target
         if (this.checker.currentState.active) {
-            const targetConnection = net.connect(
-                this.checker.target.port,
-                this.checker.target.host
-            );
+            let targetConnection;
+            try {
+                targetConnection = net.connect(
+                    this.checker.target.port,
+                    this.checker.target.host
+                );
+            } catch (err) {
+                error("Failed to connect to remote", err);
+                client.socket.end();
+                return;
+            }
             const socket = client.socket;
             client.socket = createNoopStream();
             socket.unpipe(); // stop everyone else from listening to it
