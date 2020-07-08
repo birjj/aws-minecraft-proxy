@@ -54,10 +54,6 @@ export default class ServerChecker {
                 state.data = data;
             })
             .catch((err) => {
-                if (err === TIMEOUT_ERR) {
-                    error("Target ping timed out");
-                    return;
-                }
                 silly("Target is not alive");
                 state.active = false;
             })
