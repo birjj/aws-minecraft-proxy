@@ -204,9 +204,13 @@ export default class ProxyServer extends EventEmitter {
                 };
             }
 
+            const playerTime = Math.max(
+                this.players.time,
+                this.currentState.time
+            );
             if (
                 this.players.count === 0 &&
-                Date.now() - this.players.time >= SHUTDOWN_TIMEOUT
+                Date.now() - playerTime >= SHUTDOWN_TIMEOUT
             ) {
                 log("Stopping server due to being empty");
                 this.setState(STATES.stopping);
