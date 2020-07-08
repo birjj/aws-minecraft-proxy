@@ -56,6 +56,7 @@ export default class ServerChecker {
             .catch((err) => {
                 silly("Target is not alive");
                 state.active = false;
+                state.data = this.currentState.data;
             })
             .then(() => {
                 state.time = Date.now();
