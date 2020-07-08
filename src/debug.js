@@ -29,7 +29,7 @@ if (debugLevel >= LEVELS.silly) {
 
 function logFactory(levelThreshold, ...preargs) {
     return function (...args) {
-        if (debugLevel > levelThreshold) {
+        if (debugLevel >= levelThreshold) {
             console.log(...preargs, ...args);
         }
     };
