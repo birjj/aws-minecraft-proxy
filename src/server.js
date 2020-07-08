@@ -1,8 +1,18 @@
 import mc from "minecraft-protocol";
 import net from "net";
 import stream from "stream";
+import Checker from "./checker.js";
 import { EventEmitter } from "events";
 import { silly, log, error } from "./debug.js";
+
+const STATES = {
+    unknown: 0,
+    active: 1,
+    inactive: 2,
+    starting: 3,
+    stopping: 4,
+};
+const SHUTDOWN_TIMEOUT = 5 * 60 * 1000;
 
 function createNoopStream() {
     return new stream.Duplex({
@@ -20,16 +30,15 @@ export default class ProxyServer extends EventEmitter {
         /**@type {number}*/ targetPort
     ) {
         super();
-        this.alive = false;
-        this.startTime = 0;
-        this.lastTargetData = {};
-        this.target = {
-            host: targetHost,
-            port: targetPort,
+        this.checker = new Checker(targetHost, targetPort);
+        this.currentState = {
+            state: STATES.unknown,
+            time: Date.now(),
         };
-        this.lastActiveTime = 0;
-        this.isShuttingDown = false;
-        this.checkTarget = this.checkTarget.bind(this);
+        this.players = {
+            count: 0,
+            time: Date.now(),
+        };
 
         // create the server we use to intercept the pings
         this.server = mc.createServer({
@@ -39,28 +48,49 @@ export default class ProxyServer extends EventEmitter {
             beforePing: this.beforePing.bind(this),
         });
         this.server.on("connection", this.handleClient.bind(this));
+        this.server.on("login", this.handleLogin.bind(this));
         this.server.on("listening", () => {
             log(`Listening on :${listenPort}`);
         });
 
-        // stop players from connecting to the server
-        this.server.on("login", client => {
-            client.end("Server is not started yet");
-        });
-
         // start checking if the remote is up
-        this.checkTarget();
+        this._updateTimeout = undefined;
+        this.update = this.update.bind(this);
+        this.update();
+    }
+
+    setState(state, force = false) {
+        if (this.currentState.state === state && !force) {
+            return;
+        }
+
+        silly(`Setting state to ${state}`);
+        this.currentState = {
+            state: state,
+            time: Date.now(),
+        };
+
+        switch (state) {
+            case STATES.starting:
+                log("Starting");
+                this.emit("start");
+                break;
+            case STATES.stopping:
+                log("Stopping");
+                this.emit("stop");
+                break;
+        }
     }
 
     handleClient(client) {
         const addr = client.socket.remoteAddress;
-        log(`Connection from ${addr}`);
+        silly(`Connection from ${addr}`);
 
         // hijack the socket for proxying and exit early if we have an alive target
-        if (this.alive) {
+        if (this.checker.currentState.active) {
             const targetConnection = net.connect(
-                this.target.port,
-                this.target.host
+                this.checker.target.port,
+                this.checker.target.host
             );
             const socket = client.socket;
             client.socket = createNoopStream();
@@ -78,7 +108,7 @@ export default class ProxyServer extends EventEmitter {
             return;
         }
 
-        // since we only use the ping, we don't really care about the protocol version
+        // since we only use the connection, we don't really care about the protocol version
         // we just monkeypatch it to use a known-supported version
         Object.defineProperty(client, "protocolVersion", {
             value: 575,
@@ -88,7 +118,7 @@ export default class ProxyServer extends EventEmitter {
         });
 
         // listen to stuff we want to know from client
-        client.on("error", err => {
+        client.on("error", (err) => {
             error(`Error from ${addr}`, err);
         });
         client.on("end", () => {
@@ -96,78 +126,102 @@ export default class ProxyServer extends EventEmitter {
         });
     }
 
-    beforePing(data, client) {
-        if (!this.alive) {
-            if (!this.startTime) {
-                this.startTime = Date.now();
-                this.emit("start");
-            }
-            const secondsSinceStart = Math.round(
-                (Date.now() - this.startTime) / 1000
-            );
-            data.description.text = `Please wait while the server starts (${secondsSinceStart}s)`;
-            data.players.max = 0;
-            data.version.name = "Booting up";
-            data.version.protocol = 1; // set a known-bad protocol so the user gets an error showing the version name
-        } else if (this.lastTargetData) {
-            data = this.lastTargetData;
-            data.players = { ...data.players };
-            data.players.max = 0;
+    handleLogin(client) {
+        this.setState(STATES.starting);
+        log(
+            `Player ${client.username} (${client.uuid}) connected, starting server`
+        );
+        client.end("Starting the server. Please reconnect once it's up");
+    }
+
+    beforePing(data) {
+        // if we're active, return the existing data
+        if (this.currentState.state === STATES.active) {
+            return this.checker.currentState.data;
         }
 
-        log("Sending out ping", data);
-
+        // otherwise respond with explanatory text
+        data.players.max = 0;
+        data.version.protocol = 1; // set a known-bad protocol so the user gets an error showing the version name
+        const secSinceChange = (
+            (Date.now() - this.currentState.time) /
+            1000
+        ).toFixed(0);
+        switch (this.currentState.state) {
+            case STATES.starting:
+                data.description.text = `Please wait while the server starts (${secSinceChange}s)`;
+                data.version.name = "Booting up";
+                break;
+            case STATES.stopping:
+                data.description.text = `Please wait while the server shuts down (${secSinceChange}s)`;
+                data.version.name = "Shutting down";
+                break;
+            case STATES.inactive:
+                data.description.text = `Server inactive. Connect to start`;
+                data.version.name = "Inactive";
+                break;
+            default:
+                data.description.text = `Unknown status. Please wait`;
+                data.version.name = "Unknown";
+        }
         return data;
     }
 
-    async checkTarget() {
-        try {
-            const data = await this.getTargetData();
-            silly("Target is alive", data);
-            this.alive = true;
-            this.lastTargetData = data;
-            this.startTime = 0;
+    update() {
+        clearTimeout(this._updateTimeout);
 
-            // if there are no players, shutdown after 5 minutes
-            if (data.players && data.players.online === 0) {
-                if (!this.lastActiveTime) {
-                    this.lastActiveTime = Date.now();
-                }
-                const secondsSinceActive = Math.round(
-                    (Date.now() - this.lastActiveTime) / 1000
-                );
-                silly(`Server has been inactive for ${secondsSinceActive}s`);
+        const active = this.checker.currentState.active;
 
-                if (!this.isShuttingDown && secondsSinceActive >= 5 * 60) {
-                    this.isShuttingDown = true;
-                    this.lastActiveTime = 0;
-                    this.emit("shutdown");
+        // make sure don't end up hanging on starting/stopping by introducing a timeout
+        switch (this.currentState.state) {
+            case STATES.stopping: // we keep trying to shut down if it fails
+                error("Stopping timed out. Retrying");
+                if (Date.now() - this.currentState.time > 5 * 60 * 1000) {
+                    this.setState(STATES.stopping, true);
                 }
-            } else if (data.players && data.players.online > 0) {
-                this.isShuttingDown = false;
-                this.lastActiveTime = 0;
-            }
-        } catch (e) {
-            silly("Target is not alive", e);
-            this.alive = false;
-            this.lastActiveTime = 0;
-            this.isShuttingDown = false;
+                break;
+            case STATES.starting: // if starting fails, just abort
+                error("Starting timed out. Aborting");
+                if (Date.now() - this.currentState.time > 5 * 60 * 1000) {
+                    this.setState(STATES.inactive);
+                }
+                break;
         }
 
-        setTimeout(this.checkTarget, 5000);
-    }
+        // update our state if we are active/inactive
+        if (active && this.currentState.state !== STATES.stopping) {
+            this.setState(STATES.active);
+        } else if (!active && this.currentState.state !== STATES.starting) {
+            this.setState(STATES.inactive);
+        }
 
-    async getTargetData() {
-        return new Promise((res, rej) => {
-            mc.ping(
-                { host: this.target.host, port: this.target.port },
-                (err, data) => {
-                    if (err) {
-                        return rej(err);
-                    }
-                    res(data);
-                }
-            );
-        });
+        // finally check if we should shut down
+        if (this.currentState.state === STATES.active) {
+            const players =
+                this.checker.currentState.data &&
+                this.checker.currentState.players
+                    ? this.checker.currentState.data.players.online || 0
+                    : 0;
+
+            if (players !== this.players.count) {
+                silly(
+                    `Player count changed (${this.players.count} -> ${players})`
+                );
+                this.players = {
+                    count: players,
+                    time: Date.now(),
+                };
+            }
+
+            if (
+                this.players.count === 0 &&
+                Date.now() - this.players.time >= SHUTDOWN_TIMEOUT
+            ) {
+                log("Stopping server due to being empty");
+                this.setState(STATES.stopping);
+            }
+        }
+
+        this._updateTimeout = setTimeout(this.update, 1000);
     }
 }

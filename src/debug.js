@@ -1,3 +1,8 @@
+/**
+ * @fileoverview Exports utility functions for logging at a specific level
+ * Also monkey patches minecraft-protocol to include logging.
+ */
+
 import mc from "minecraft-protocol";
 
 const LEVELS = {
@@ -10,20 +15,20 @@ const debugLevel =
     process.env.DBGLEVEL === undefined ? 2 : LEVELS[process.env.DBGLEVEL];
 if (debugLevel >= LEVELS.silly) {
     mc.Client.prototype._write = mc.Client.prototype.write;
-    mc.Client.prototype.write = function(...args) {
+    mc.Client.prototype.write = function (...args) {
         console.log("[silly] Client write:", ...args);
         this._write(...args);
     };
 
     mc.Client.prototype._emit = mc.Client.prototype.emit;
-    mc.Client.prototype.emit = function(...args) {
+    mc.Client.prototype.emit = function (...args) {
         console.log("[silly] Client emit:", ...args);
         this._emit(...args);
     };
 }
 
 function logFactory(levelThreshold, ...preargs) {
-    return function(...args) {
+    return function (...args) {
         if (debugLevel > levelThreshold) {
             console.log(...preargs, ...args);
         }

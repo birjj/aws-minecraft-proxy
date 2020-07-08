@@ -32,7 +32,7 @@ Add the following (and customize it):
 function executeCommand(name) {
     const command = config.commands[name];
     if (!command) {
-        silly(`Unknown command ${name}`);
+        error(`Unknown command ${name}`);
         return;
     }
     log(`Executing command ${name}: ${command}`);
@@ -57,6 +57,6 @@ const server = new Server(25565, config.target.host, config.target.port);
 server.on("start", () => {
     executeCommand("start");
 });
-server.on("shutdown", () => {
+server.on("stop", () => {
     executeCommand("shutdown");
 });
