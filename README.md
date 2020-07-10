@@ -1,4 +1,4 @@
-Proxy Minecraft server that automatically runs a start command when someone pings it (i.e. displays it in the server list), and a shutdown command if nobody has been on a specified target server for 5 minutes.
+Proxy Minecraft server that automatically runs a start command when someone joins (and then kicks them until the real server is up), and a shutdown command if nobody has been on a specified target server for 5 minutes.
 
 Useful for starting or stopping an EC2 instance containing your Minecraft server when needed, and shutting it down to save money when it's not.
 
