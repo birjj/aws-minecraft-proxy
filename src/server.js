@@ -27,7 +27,8 @@ export default class ProxyServer extends EventEmitter {
     constructor(
         /**@type {number}*/ listenPort,
         /**@type {string}*/ targetHost,
-        /**@type {number}*/ targetPort
+        /**@type {number}*/ targetPort,
+        /**@type {mc.ServerOptions}*/ mcProtocolArgs = {}
     ) {
         super();
         this.checker = new Checker(targetHost, targetPort);
@@ -46,6 +47,7 @@ export default class ProxyServer extends EventEmitter {
             port: listenPort,
             keepAlive: false,
             beforePing: this.beforePing.bind(this),
+            ...mcProtocolArgs,
         });
         this.server.on("connection", this.handleClient.bind(this));
         this.server.on("login", this.handleLogin.bind(this));
@@ -57,6 +59,12 @@ export default class ProxyServer extends EventEmitter {
         this._updateTimeout = undefined;
         this.update = this.update.bind(this);
         this.update();
+    }
+
+    close() {
+        this.checker.close();
+        this.server.close();
+        clearTimeout(this._updateTimeout);
     }
 
     setState(state, force = false) {

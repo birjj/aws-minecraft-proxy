@@ -1,20 +1,10 @@
 import mc from "minecraft-protocol";
 import { silly, log, error } from "./debug.js";
+import { timeoutPromise } from "./utils.js";
 
 const TIMEOUT_ERR = "TIMEOUT";
 const CHECK_INTERVAL = 5000;
 const CHECK_TIMEOUT = 5000;
-
-const timeoutPromise = (time, data = undefined, resolve = false) => {
-    return new Promise((res, rej) => {
-        setTimeout(() => {
-            if (resolve) {
-                return res(data);
-            }
-            rej(data);
-        }, time);
-    });
-};
 
 export default class ServerChecker {
     constructor(
@@ -35,6 +25,10 @@ export default class ServerChecker {
         this._checkTimeout = undefined;
         this.checkTarget = this.checkTarget.bind(this);
         this.checkTarget();
+    }
+
+    close() {
+        clearTimeout(this._checkTimeout);
     }
 
     checkTarget() {
