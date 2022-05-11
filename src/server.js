@@ -106,6 +106,7 @@ export default class ProxyServer extends EventEmitter {
                 socket = client.socket;
                 client.socket = createNoopStream();
                 socket.unpipe(); // stop everyone else from listening to it
+                client.framer.unpipe(); // stop minecraft-protocol client from writing to it
                 socket.pipe(targetConnection);
                 targetConnection.pipe(socket);
             } catch (err) {
