@@ -54,9 +54,44 @@ function executeCommand(name) {
 }
 
 const server = new Server(25565, config.target.host, config.target.port);
+
 server.on("start", () => {
     executeCommand("start");
+    //const { exec } = require('node:child_process') //this is broken and maybe not needed?
+
+    childProcess.exec('/home/ec2-user/aws-minecraft-proxy/get_ip.sh', (err, output) => {
+    // once the command has completed, the callback function is called
+        if (err) {
+            // log and return if we encounter an error
+            console.error("could not execute command: ", err);
+            return;
+        }
+        // log the output received from the command
+        //var ip_addr = output;
+        var ip_addr = output.match(/\d+\.\d+\.\d+\.\d+/);
+        //ip_addr.replaceAll('\n', '');
+        console.log("Server IP: ", ip_addr[0]);
+        server.checker.target.host = ip_addr[0];
+    })
+
 });
+
 server.on("stop", () => {
     executeCommand("shutdown");
+});
+
+server.on("get_ip", () => {
+    childProcess.exec('/home/ec2-user/aws-minecraft-proxy/get_ip.sh', (err, output) => {
+    // once the command has completed, the callback function is called
+        if (err) {
+            // log and return if we encounter an error
+            console.error("could not execute command: ", err);
+            return;
+        }
+        // log the output received from the command
+        var ip_addr = output.match(/\d+\.\d+\.\d+\.\d+/);
+        console.log("Server IP: ", ip_addr[0]);
+        server.checker.target.host = ip_addr[0];
+    })
+
 });
