@@ -81,6 +81,7 @@ export default class ProxyServer extends EventEmitter {
         switch (state) {
             case STATES.starting:
                 log("Starting");
+                this.emit("")
                 this.emit("start");
                 break;
             case STATES.stopping:
@@ -149,6 +150,11 @@ export default class ProxyServer extends EventEmitter {
     }
 
     beforePing(data) {
+
+	this.emit('get_ip');
+
+	this.update();
+
         // if we're active, return the existing data
         if (this.currentState.state === STATES.active) {
             return this.checker.currentState.data;
@@ -187,6 +193,8 @@ export default class ProxyServer extends EventEmitter {
 
     update() {
         clearTimeout(this._updateTimeout);
+
+	    this.checker.checkTarget();
 
         const active = this.checker.currentState.active;
 

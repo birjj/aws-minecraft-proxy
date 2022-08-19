@@ -33,7 +33,8 @@ export default class ServerChecker {
 
     checkTarget() {
         clearTimeout(this._checkTimeout);
-        const state = {
+		console.log("checking server ip:", this.target.host);
+        var state = {
             active: false,
             data: {},
             time: 0,
