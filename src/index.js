@@ -66,7 +66,7 @@ Add the following (and customize it):
             config.target.host = await executeCommand("get_host");
         }
         if (config.commands["get_port"]) {
-            config.target.port = await executeCommand("get_port");
+            config.target.port = +(await executeCommand("get_port"));
         }
     }
     if (!config.target.host || !config.target.port) {
