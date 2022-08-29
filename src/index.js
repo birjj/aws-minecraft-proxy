@@ -7,28 +7,6 @@ import Server from "./server.js";
 import dirname from "./dirname.cjs";
 const { __dirname } = dirname;
 
-// make sure configuration is specified in package.json
-const pkg = JSON.parse(
-    fs.readFileSync(path.join(__dirname, "../package.json"))
-);
-const config = pkg["minecraft-aws"];
-if (!config || !config.commands) {
-    console.log(`The "minecraft-aws" configuration is missing from package.json.
-Add the following (and customize it):
-"minecraft-aws": ${JSON.stringify(
-        {
-            target: { host: "localhost", port: 25565 },
-            commands: {
-                start: "echo 'Starting server'",
-                shutdown: "echo 'Shutting down server'",
-            },
-        },
-        null,
-        2
-    )}`);
-    process.exit(1);
-}
-
 /** Executes the command with the given name, throwing an error if it doesn't succeed. */
 async function executeCommand(name) {
     const command = config.commands[name];
@@ -58,18 +36,57 @@ async function executeCommand(name) {
     });
 }
 
-const server = new Server(25565, config.target.host, config.target.port);
-server.on("start", async () => {
-    try {
-        executeCommand("start");
-    } catch (e) {
-        error(e);
+// make sure configuration is specified in package.json
+const pkg = JSON.parse(
+    fs.readFileSync(path.join(__dirname, "../package.json"))
+);
+const config = pkg["minecraft-aws"];
+if (!config || !config.commands) {
+    console.log(`The "minecraft-aws" configuration is missing from package.json.
+Add the following (and customize it):
+"minecraft-aws": ${JSON.stringify(
+        {
+            target: { host: "localhost", port: 25565 },
+            commands: {
+                start: "echo 'Starting server'",
+                shutdown: "echo 'Shutting down server'",
+            },
+        },
+        null,
+        2
+    )}`);
+    process.exit(1);
+}
+
+// run the server
+(async () => {
+    if (config.commands["get_host"] || config.commands["get_port"]) {
+        config.target = config.target || {};
+        if (config.commands["get_host"]) {
+            config.target.host = await executeCommand("get_host");
+        }
+        if (config.commands["get_port"]) {
+            config.target.port = await executeCommand("get_port");
+        }
     }
-});
-server.on("stop", async () => {
-    try {
-        await executeCommand("shutdown");
-    } catch (e) {
-        error(e);
+    if (!config.target.host || !config.target.port) {
+        error(`No target server specified: ${host}:${port}`);
+        process.exit(1);
     }
-});
+
+    const server = new Server(25565, config.target.host, config.target.port);
+    server.on("start", async () => {
+        try {
+            await executeCommand("start");
+        } catch (e) {
+            error(e);
+        }
+    });
+    server.on("stop", async () => {
+        try {
+            await executeCommand("shutdown");
+        } catch (e) {
+            error(e);
+        }
+    });
+})();
