@@ -29,3 +29,39 @@ Finally run `sudo systemctl restart minecraft-proxy` to reload the proxy server 
 ## Usage
 
 Simply add the proxy server's IP (and port 25565) to your Minecraft server list. Whenever you (or anyone else) pings the server for its current status, they _real_ Minecraft server will start. Once that one has finished starting up, the proxy server will directly pipe through all connections, making it completely invisible. Once nobody has been on the server for 5 minutes, the proxy server will shut down the Minecraft server and the process will start over again.
+
+## Configuration
+
+The project can be configured in `package.json`, with a configuration object placed under the `minecraft-aws` key. This configuration object supports the following keys:
+
+
+<table>
+  <thead>
+    <tr><th>Key</th><th>Type</th><th>Description</th></tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td>target</td>
+      <td><code>{ host: string, port: number }</code></td>
+      <td>The Minecraft server to forward clients to. If not set, the <code>get_host</code> and <code>get_port</code> commands must be given.</td>
+    </tr>
+    <tr>
+      <td>commands</td>
+      <td><code>{ [command]: string }</code></td>
+      <td><em>Required.</em> The commands to run when certain events happen. The available commands are:</td>
+    </tr>
+    <tr>
+      <td></td>
+      <td colspan="2">
+        <table>
+          <tbody>
+            <tr><td>start</td><td><em>Required.</em> Ran when someone connects while the target server is down. Should boot up the target server.</td></tr>
+            <tr><td>stop</td><td><em>Required.</em> Ran when nobody has been on the server for 5 minutes. Should shut down the target server.</td></tr>
+            <tr><td>get_host</td><td>If set, overwrites the <code>target.host</code> parameter. The command will be executed when the proxy starts and the output will be used as the target host.</td></tr>
+            <tr><td>get_port</td><td>If set, overwrites the <code>target.port</code> parameter. The command will be executed when the proxy starts and the output will be used as the target port.</td></tr>
+          </tbody>
+        </table>
+      </td>
+    </tr>
+  </tbody>
+</table>
